@@ -5,6 +5,7 @@ const api = axios.create({
 });
 
 export const createReservation = (data) => api.post('/api/reservations', data);
+export const getReservation = (id) => api.get(`/api/reservations/${id}`);
 export const getReservations = (status) =>
   api.get('/api/reservations', { params: status ? { status } : {} });
 export const updateStatus = (id, status) =>
