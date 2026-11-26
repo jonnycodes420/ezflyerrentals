@@ -1,243 +1,290 @@
-import { useEffect, useRef, useState } from 'react';
-import { BOOKING_URL, PHONE, PHONE_HREF, EMAIL } from './config';
+import { useState } from 'react';
+import { BOOKING_URL, PHONE, PHONE_HREF, EMAIL, VEHICLES } from './config';
 
-const AIRPORT = { x: 420, y: 300 };
+const lowest = Math.min(...VEHICLES.map((v) => v.rate));
 
-function ChartHero() {
-  const svgRef = useRef(null);
-  const [heading, setHeading] = useState(10);
-  const [touched, setTouched] = useState(false);
-
-  useEffect(() => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduce) return;
-    const onMove = (e) => {
-      const r = svg.getBoundingClientRect();
-      const sx = r.width / 600, sy = r.height / 600;
-      const ax = r.left + AIRPORT.x * sx, ay = r.top + AIRPORT.y * sy;
-      const deg = (Math.atan2(e.clientX - ax, ay - e.clientY) * 180) / Math.PI;
-      setHeading((deg + 360) % 360);
-      setTouched(true);
-    };
-    window.addEventListener('pointermove', onMove);
-    svg.addEventListener('pointerdown', onMove);
-    return () => { window.removeEventListener('pointermove', onMove); svg.removeEventListener('pointerdown', onMove); };
-  }, []);
-
-  const hdg = String(Math.round(heading) % 360).padStart(3, '0');
-  const ticks = Array.from({ length: 36 }, (_, i) => i * 10);
-
+function Logo({ size = 'sm' }) {
   return (
-    <figure className="chart" aria-label="Chart of Fairhope Executive Airport on the eastern shore of Mobile Bay">
-      <svg ref={svgRef} viewBox="0 0 600 600" role="img" aria-hidden="true">
-        <defs>
-          <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
-            <line x1="0" y1="0" x2="0" y2="7" stroke="var(--water-line)" strokeWidth="1" />
-          </pattern>
-          <clipPath id="frame"><rect x="0" y="0" width="600" height="600" rx="6" /></clipPath>
-        </defs>
-        <g clipPath="url(#frame)">
-          <rect width="600" height="600" fill="var(--paper-2)" />
-          {/* lat/long grid */}
-          {[100, 200, 300, 400, 500].map((v) => (
-            <g key={v} stroke="var(--grid)" strokeWidth="1">
-              <line x1={v} y1="0" x2={v} y2="600" />
-              <line x1="0" y1={v} x2="600" y2={v} />
-            </g>
-          ))}
-          {/* terrain contours */}
-          <g fill="none" stroke="var(--terrain)" strokeWidth="1.4">
-            <path d="M330 40 C420 70 520 40 600 90" />
-            <path d="M300 110 C380 140 470 120 600 170" />
-            <path d="M470 230 C520 210 560 250 600 240" />
-            <path d="M260 470 C340 440 430 500 520 470 S600 430 610 450" />
-            <path d="M300 540 C380 520 460 570 600 540" />
-          </g>
-          {/* Mobile Bay */}
-          <path
-            d="M0 0 L190 0 C200 60 175 110 205 170 C232 222 214 270 236 330 C252 378 228 430 250 490 C262 530 246 570 258 600 L0 600 Z"
-            fill="var(--water)"
-          />
-          <path
-            d="M0 0 L190 0 C200 60 175 110 205 170 C232 222 214 270 236 330 C252 378 228 430 250 490 C262 530 246 570 258 600 L0 600 Z"
-            fill="url(#hatch)" opacity=".55"
-          />
-          <path
-            d="M190 0 C200 60 175 110 205 170 C232 222 214 270 236 330 C252 378 228 430 250 490 C262 530 246 570 258 600"
-            fill="none" stroke="var(--water-line)" strokeWidth="2.5"
-          />
-          <text x="60" y="250" className="chart-water">Mobile Bay</text>
-          {/* town */}
-          <g fill="var(--town)">
-            <rect x="248" y="250" width="44" height="30" rx="3" opacity=".55" />
-            <rect x="256" y="284" width="30" height="22" rx="3" opacity=".55" />
-          </g>
-          <text x="244" y="242" className="chart-town">Fairhope</text>
-          {/* approach path + plane */}
-          <path id="approach" d="M120 40 C230 70 320 120 380 190 S424 268 420 300"
-            fill="none" stroke="var(--magenta)" strokeWidth="1.5" strokeDasharray="6 6" opacity=".7" />
-          <g className="plane">
-            <path d="M0 -11 L2 -3 L11 2 L11 4 L2 1 L1.5 8 L4 10 L4 11.5 L0 10.5 L-4 11.5 L-4 10 L-1.5 8 L-2 1 L-11 4 L-11 2 L-2 -3 Z"
-              fill="var(--ink)" />
-          </g>
-          {/* compass rose */}
-          <g transform={`translate(${AIRPORT.x} ${AIRPORT.y})`}>
-            <circle r="120" fill="none" stroke="var(--blue)" strokeWidth="1.2" opacity=".8" />
-            {ticks.map((t) => (
-              <line key={t} x1="0" y1={-120} x2="0" y2={t % 30 === 0 ? -106 : -113}
-                stroke="var(--blue)" strokeWidth={t % 90 === 0 ? 2.2 : 1.2} transform={`rotate(${t})`} />
-            ))}
-            {[['N', 0], ['E', 90], ['S', 180], ['W', 270]].map(([l, d]) => (
-              <text key={l} className="chart-rose" transform={`rotate(${d}) translate(0 -91)`} textAnchor="middle" dominantBaseline="middle">{l}</text>
-            ))}
-            {/* heading needle */}
-            <g className="needle" style={{ transform: `rotate(${heading}deg)` }}>
-              <line x1="0" y1="-44" x2="0" y2="-124" stroke="var(--magenta)" strokeWidth="2.5" />
-              <path d="M0 -136 L7 -122 L-7 -122 Z" fill="var(--magenta)" />
-            </g>
-            {/* airport symbol */}
-            <circle r="30" fill="var(--paper-2)" stroke="var(--magenta)" strokeWidth="7" />
-            <rect x="-4.5" y="-40" width="9" height="80" rx="1.5" fill="var(--magenta)" transform="rotate(10)" />
-          </g>
-          <g className="chart-label" transform="translate(420 470)" textAnchor="middle">
-            <text y="0">FAIRHOPE EXEC</text>
-            <text y="22">(KCQF)</text>
-          </g>
-        </g>
-      </svg>
-      <figcaption className="readout" aria-live="off">
-        <span>Heading</span>
-        <strong>{hdg}°</strong>
-        <em>{touched ? 'All roads lead to KCQF' : 'Point anywhere to steer'}</em>
-      </figcaption>
-    </figure>
+    <span className={`logo logo-${size}`}>
+      <span className="logo-top">EZ FLYER</span>
+      <span className="logo-bottom">Car Rentals</span>
+    </span>
+  );
+}
+
+function Suv() {
+  return (
+    <svg viewBox="0 0 240 92" className="art" aria-hidden="true">
+      <path d="M18 64 V50 Q19 43 28 41 L62 37 L86 22 Q90 19 97 19 H177 Q184 19 188 23 L204 38 L217 41 Q224 43 224 51 V64 H196 M166 64 H76 M46 64 H18"
+        fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M70 37 L90 25 H129 V37 Z M136 25 H173 L190 37 H136 Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <circle cx="61" cy="64" r="13" fill="none" stroke="currentColor" strokeWidth="2" />
+      <circle cx="61" cy="64" r="5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="181" cy="64" r="13" fill="none" stroke="currentColor" strokeWidth="2" />
+      <circle cx="181" cy="64" r="5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function Jet() {
+  return (
+    <svg viewBox="0 0 240 92" className="art" aria-hidden="true">
+      <path d="M30 56 L176 50 Q200 49 214 42 L222 30 L230 30 L226 47 Q222 56 200 58 L120 61 L96 74 H84 L96 61 L40 63 Q28 62 30 56 Z"
+        fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M118 54 L140 40 H150 L138 53" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M48 55 h6 M62 54.5 h6 M76 54 h6" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+const icons = {
+  plane: <path d="M3 13l7-2 4-8 2 1-2 7 6 1 2-2h2l-2 4 1 4h-2l-2-2-6 1 2 7-2 1-4-8-7-2z" />,
+  clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+  check: <><circle cx="12" cy="12" r="9" /><path d="M8 12l3 3 5-6" /></>,
+  receipt: <><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" /><path d="M9 8h6M9 12h6" /></>,
+};
+function Icon({ name }) {
+  return (
+    <svg viewBox="0 0 24 24" className="icon" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {icons[name]}
+    </svg>
+  );
+}
+
+function ReserveCard() {
+  const [vehicle, setVehicle] = useState(VEHICLES[0].id);
+  const submit = (e) => {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const params = new URLSearchParams();
+    for (const [k, v] of f.entries()) if (v) params.set(k, v);
+    const sep = BOOKING_URL.includes('?') ? '&' : '?';
+    window.location.href = BOOKING_URL.startsWith('#') ? BOOKING_URL : `${BOOKING_URL}${sep}${params}`;
+  };
+  return (
+    <form className="reserve" onSubmit={submit} aria-labelledby="reserve-title">
+      <h2 id="reserve-title">Reserve your vehicle</h2>
+      <p className="reserve-sub">Staged at Flightline First before you arrive.</p>
+      <div className="row2">
+        <label>Pickup<input type="datetime-local" name="pick_up" /></label>
+        <label>Return<input type="datetime-local" name="return" /></label>
+      </div>
+      <label>Vehicle
+        <select name="vehicle" value={vehicle} onChange={(e) => setVehicle(e.target.value)}>
+          {VEHICLES.map((v) => <option key={v.id} value={v.id}>{v.name} &middot; ${v.rate}/day</option>)}
+        </select>
+      </label>
+      <div className="row2">
+        <label>Tail number<input name="tail_number" placeholder="N123EZ (optional)" autoComplete="off" /></label>
+        <label>Arriving from<input name="arriving_from" placeholder="KATL (optional)" autoComplete="off" /></label>
+      </div>
+      <button className="btn btn-gold btn-block" type="submit">Check availability</button>
+      <p className="reserve-foot">From <strong>${lowest}/day</strong>, fees included &middot; 100 miles/day included</p>
+    </form>
   );
 }
 
 const steps = [
-  { t: 'Reserve online', d: 'Pick your dates and add your arrival details. It takes a couple of minutes.' },
-  { t: 'Land at KCQF', d: 'Fly into Fairhope Executive Airport. We keep an eye on your arrival time.' },
-  { t: 'Grab the keys', d: 'Your Palisade is parked and ready at the FBO. No shuttle, no counter line.' },
-  { t: 'Drop it back', d: 'Return the car at the airport before you fly out and you are on your way.' },
+  { t: 'Book & verify', d: 'Reserve online or by phone. Upload your license and proof of insurance, and e-sign your agreement.' },
+  { t: 'Land at KCQF', d: 'Share your arrival time and tail number. Your SUV is cleaned, fueled, and staged at Flightline First.' },
+  { t: 'Drive away', d: 'Grab your keys at the Flightline First desk, or use your code at the keybox after hours.' },
+  { t: 'Return anytime', d: 'Park in the EZ Flyer spaces, snap a few photos, and drop the key. That’s it.' },
 ];
 
 const faqs = [
-  { q: 'Where do I pick up the car?', a: 'Right at Fairhope Executive Airport (KCQF). After you book, we send the exact pickup spot and instructions.' },
-  { q: 'What if my flight is running late?', a: 'Add your arrival details when you book. If plans change, call or text us and we will adjust your pickup.' },
-  { q: 'How old do I need to be?', a: 'Renters must be at least 25 with a valid driver’s license.' },
-  { q: 'Do I need my own insurance?', a: 'You can use your own auto policy or choose our damage waiver when you reserve.' },
-  { q: 'How many people fit?', a: 'The Hyundai Palisade is a full three-row SUV, so there is room for your whole crew and their bags.' },
+  { q: 'What do I need to rent?', a: 'Renters must be 25 or older with a valid driver’s license, a major credit card, and proof of insurance.' },
+  { q: 'Can I pick up after hours?', a: 'Yes. If the Flightline First desk is closed, your keys are waiting in the keybox and you’ll get the code before you land.' },
+  { q: 'How many miles are included?', a: '100 miles per day. Fuel is simple: return it at the level you picked it up.' },
+  { q: 'What does the daily rate include?', a: 'The airport concession and location fees are built into the rate. Only taxes are added at checkout.' },
 ];
-
-function Faq() {
-  return (
-    <div className="faq">
-      {faqs.map((f) => (
-        <details key={f.q}>
-          <summary>
-            <span>{f.q}</span>
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 7l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" /></svg>
-          </summary>
-          <p>{f.a}</p>
-        </details>
-      ))}
-    </div>
-  );
-}
 
 export default function App() {
   return (
     <>
       <a className="skip" href="#main">Skip to content</a>
-      <header className="top">
-        <a href="#" className="brand" aria-label="EzFlyer Rentals home">
-          <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" strokeWidth="4" /><rect x="14" y="3" width="4" height="26" rx="1" fill="currentColor" transform="rotate(10 16 16)" /></svg>
-          <span>EzFlyer</span>
-        </a>
-        <nav>
-          <a href="#how">How it works</a>
-          <a href="#info">Info</a>
-          <a className="btn btn-sm" href={BOOKING_URL}>Book a car</a>
-        </nav>
+      <header className="nav">
+        <div className="wrap nav-inner">
+          <a href="#" aria-label="EZ Flyer Car Rentals home"><Logo /></a>
+          <nav aria-label="Main">
+            <a href="#fleet">Fleet</a>
+            <a href="#how">How it works</a>
+            <a href="#rates">Rates</a>
+            <a href="#corporate">Crew &amp; Corporate</a>
+            <a href="#faq">FAQ</a>
+          </nav>
+          <div className="nav-right">
+            <a className="nav-phone" href={PHONE_HREF}>{PHONE}</a>
+            <a className="btn btn-gold btn-sm" href={BOOKING_URL}>Reserve</a>
+          </div>
+        </div>
       </header>
 
       <main id="main">
         <section className="hero">
-          <div className="hero-copy">
-            <p className="kicker">Car rental at Fairhope Executive Airport</p>
-            <h1>Land.<br />Grab the keys.<br />Go.</h1>
-            <p className="lede">
-              EzFlyer keeps a small fleet of Hyundai Palisades waiting right on the field at KCQF,
-              so your trip starts the moment you shut down.
-            </p>
-            <div className="cta-row">
-              <a className="btn" href={BOOKING_URL}>Book a car</a>
-              <a className="link" href="#how">See how it works</a>
+          <svg className="runway" viewBox="0 0 1200 300" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M600 0 L-200 300 M600 0 L1400 300 M600 0 L300 300 M600 0 L900 300" stroke="currentColor" strokeWidth="1" fill="none" />
+          </svg>
+          <div className="wrap hero-grid">
+            <div>
+              <p className="eyebrow">H.L. &ldquo;Sonny&rdquo; Callahan Airport &middot; KCQF &middot; Fairhope, AL</p>
+              <h1>Your car is waiting <span>when you land.</span></h1>
+              <p className="lede">Premium SUVs staged on-site at Flightline First. Book online, sign digitally, and drive away minutes after shutdown. No counter, no shuttle, no wait.</p>
+              <div className="cta-row">
+                <a className="btn btn-gold" href={BOOKING_URL}>Reserve a vehicle</a>
+                <a className="btn btn-ghost" href={PHONE_HREF}>Call {PHONE}</a>
+              </div>
+              <dl className="hero-points">
+                <div><dt>On the field</dt><dd>Cars parked at the FBO, never off-site.</dd></div>
+                <div><dt>Any hour</dt><dd>After-hours keybox pickup and return.</dd></div>
+                <div><dt>Paperless</dt><dd>Verify and e-sign before you take off.</dd></div>
+              </dl>
             </div>
+            <ReserveCard />
           </div>
-          <ChartHero />
+        </section>
+
+        <section className="strip" aria-label="Highlights">
+          <div className="wrap strip-grid">
+            <div><Icon name="plane" /><span>Planeside-ready at KCQF</span></div>
+            <div><Icon name="clock" /><span>After-hours pickup</span></div>
+            <div><Icon name="check" /><span>Detailed between every rental</span></div>
+            <div><Icon name="receipt" /><span>Transparent, all-in pricing</span></div>
+          </div>
         </section>
 
         <section id="how" className="how">
-          <h2>From the ramp to the road</h2>
-          <ol>
-            {steps.map((s, i) => (
-              <li key={s.t}>
-                <span className="num">{i + 1}</span>
-                <h3>{s.t}</h3>
-                <p>{s.d}</p>
-              </li>
+          <div className="wrap">
+            <p className="kicker">How it works</p>
+            <h2>From the ramp to the road in minutes.</h2>
+            <p className="sub">Everything happens before you land, so you can step off and go.</p>
+            <ol className="steps">
+              {steps.map((s, i) => (
+                <li key={s.t}>
+                  <span className="step-num">{String(i + 1).padStart(2, '0')}</span>
+                  <h3>{s.t}</h3>
+                  <p>{s.d}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        <section id="fleet" className="fleet">
+          <div className="wrap">
+            <p className="kicker">The fleet</p>
+            <h2>Premium SUVs, ready for the Gulf Coast.</h2>
+            <p className="sub">Room for crews, clients, golf bags, and beach gear.</p>
+            <div className="fleet-grid">
+              {VEHICLES.map((v) => (
+                <article className="vcard" key={v.id}>
+                  <div className="vcard-art">
+                    <span className="tag">{v.available} available</span>
+                    <Suv />
+                  </div>
+                  <div className="vcard-body">
+                    <h3>{v.name}</h3>
+                    <p className="vkind">{v.kind}</p>
+                    <ul className="specs">{v.specs.map((s) => <li key={s}>{s}</li>)}</ul>
+                    <div className="vprice">
+                      <span><strong>${v.rate}</strong> / day</span>
+                      <a href={BOOKING_URL}>Reserve</a>
+                    </div>
+                  </div>
+                </article>
+              ))}
+              <article className="vcard" id="corporate">
+                <div className="vcard-art">
+                  <span className="tag">For operators</span>
+                  <Jet />
+                </div>
+                <div className="vcard-body">
+                  <h3>Crew &amp; Corporate</h3>
+                  <p className="vkind">Accounts for flight departments</p>
+                  <ul className="perks">
+                    <li>Card on file, one-tap rebooking</li>
+                    <li>Consolidated invoices for expense reports</li>
+                    <li>Priority holds around your schedule</li>
+                  </ul>
+                  <div className="vprice">
+                    <span className="vprice-label">Set up an account</span>
+                    <a href={`mailto:${EMAIL}?subject=Crew%20%26%20Corporate%20account`}>Contact us</a>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section id="rates" className="rates">
+          <div className="wrap rates-grid">
+            <div>
+              <p className="kicker kicker-left">Rates</p>
+              <h2>One daily rate. <span>No surprises.</span></h2>
+              <p className="sub sub-left">Airport fees are built into the price you see. 100 miles per day are included, and fuel is simple: return it at the level you picked it up.</p>
+            </div>
+            <table className="rate-table">
+              <caption className="sr">Daily rates</caption>
+              <tbody>
+                {VEHICLES.map((v) => (
+                  <tr key={v.id}><th scope="row">{v.name}</th><td>${v.rate.toFixed(2)} / day</td></tr>
+                ))}
+                <tr><th scope="row">Airport concession &amp; location fees</th><td>Included</td></tr>
+                <tr><th scope="row">Mileage</th><td>100 miles / day</td></tr>
+                <tr className="total"><th scope="row">Taxes</th><td>Added at checkout</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="faq" className="faq">
+          <div className="wrap faq-wrap">
+            <p className="kicker">FAQ</p>
+            <h2>Before you fly in.</h2>
+            {faqs.map((f) => (
+              <details key={f.q}>
+                <summary>{f.q}<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" /></svg></summary>
+                <p>{f.a}</p>
+              </details>
             ))}
-          </ol>
-        </section>
-
-        <section id="info" className="info">
-          <div className="car">
-            <h2>Hyundai Palisade</h2>
-            <p className="car-sub">Every car in the fleet is the same roomy three-row SUV.</p>
-            <dl>
-              <div><dt>Seats</dt><dd>Up to 8</dd></div>
-              <div><dt>Fleet</dt><dd>3 cars</dd></div>
-              <div><dt>Pickup</dt><dd>On the field</dd></div>
-            </dl>
-            <p className="note">With only three cars available, booking ahead is the best way to make sure one is waiting for you.</p>
           </div>
-
-          <div className="needs">
-            <h2>Before you book</h2>
-            <ul>
-              <li><strong>25 or older.</strong> Every renter needs to meet the minimum age.</li>
-              <li><strong>Valid driver&rsquo;s license.</strong> You&rsquo;ll verify it when you reserve.</li>
-              <li><strong>Insurance.</strong> Bring your own auto policy or add our damage waiver.</li>
-            </ul>
-          </div>
-        </section>
-
-        <section className="questions">
-          <h2>Questions pilots ask</h2>
-          <Faq />
         </section>
 
         <section className="final">
-          <div>
+          <div className="wrap final-inner">
+            <Logo size="lg" />
             <h2>Flying into Fairhope?</h2>
-            <p>Reserve your Palisade now and it will be ready when you land.</p>
-          </div>
-          <div className="final-actions">
-            <a className="btn btn-light" href={BOOKING_URL}>Book a car</a>
-            <p className="contact">
-              <a href={PHONE_HREF}>{PHONE}</a>
-              <a href={`mailto:${EMAIL}`}>{EMAIL}</a>
-            </p>
+            <p>Reserve now and your car will be waiting at Flightline First.</p>
+            <div className="cta-row center">
+              <a className="btn btn-gold" href={BOOKING_URL}>Reserve a vehicle</a>
+              <a className="btn btn-ghost" href={`mailto:${EMAIL}`}>{EMAIL}</a>
+            </div>
           </div>
         </section>
       </main>
 
       <footer className="foot">
-        <p>EzFlyer Rentals, Fairhope Executive Airport (KCQF), Fairhope, Alabama</p>
-        <p>&copy; {new Date().getFullYear()} EzFlyer Rentals</p>
+        <div className="wrap foot-grid">
+          <div>
+            <h4>EZ Flyer Car Rentals</h4>
+            <p>Premium on-airport rentals for private aviation at H.L. &ldquo;Sonny&rdquo; Callahan Airport (KCQF), Fairhope, Alabama.</p>
+          </div>
+          <div>
+            <h4>Pickup</h4>
+            <p>Flightline First<br />Fairhope, AL</p>
+          </div>
+          <div>
+            <h4>Contact</h4>
+            <p><a href={PHONE_HREF}>{PHONE}</a><br /><a href={`mailto:${EMAIL}`}>{EMAIL}</a></p>
+          </div>
+          <div>
+            <h4>Explore</h4>
+            <p><a href="#fleet">Fleet</a><br /><a href="#how">How it works</a><br /><a href="#rates">Rates</a><br /><a href="#faq">FAQ</a></p>
+          </div>
+        </div>
+        <div className="wrap foot-bottom">
+          <span>&copy; {new Date().getFullYear()} EZ Flyer Car Rentals, LLC</span>
+          <span>Renters must be 25+ with a valid license, major credit card, and proof of insurance.</span>
+        </div>
       </footer>
     </>
   );
